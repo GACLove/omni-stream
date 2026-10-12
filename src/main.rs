@@ -79,6 +79,10 @@ async fn main() -> anyhow::Result<()> {
         print_top_help();
         return Ok(());
       }
+      "-V" | "--version" => {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+      }
       other => {
         eprintln!(
           "{} {} {}",
@@ -141,6 +145,21 @@ async fn main() -> anyhow::Result<()> {
     );
   } else {
     tracing::warn!("SQL query endpoint disabled: requires auth.enabled = true and [sql] enabled");
+  }
+  #[cfg(not(feature = "duckdb"))]
+  if cfg.sql.enabled {
+    if cfg.auth.enabled {
+      tracing::warn!(
+        "SQL query endpoint disabled: binary was built without the `duckdb` feature; \
+         rebuild with `--features duckdb` to enable it",
+      );
+    } else {
+      tracing::warn!(
+        "SQL query endpoint disabled: binary was built without the `duckdb` feature and \
+         auth.enabled is false; rebuild with `--features duckdb` and set \
+         `auth.enabled = true` to enable it",
+      );
+    }
   }
   let state = AppState::new(
     registry,
@@ -345,6 +364,10 @@ fn print_top_help() {
     cli_style::cyan("omni-stream cache"),
     cli_style::cyan("<op>"),
     cli_style::dim("(see `cache --help`)"),
+  );
+  println!(
+    "  {}              Print the current version",
+    cli_style::cyan("-V, --version"),
   );
 }
 
