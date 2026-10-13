@@ -27,10 +27,11 @@ describe('htmlPreviewDocument', () => {
         getElementById: (id: string) => scrolls.has(id)
           ? { scrollIntoView: scrolls.get(id) } : null,
       },
+      location: { hash: '' },
     })
     const preventDefault = vi.fn()
     expect(() => click({ target: new Element(), preventDefault })).not.toThrow()
-    expect(preventDefault).toHaveBeenCalledTimes(expected === null ? 0 : 1)
+    expect(preventDefault).toHaveBeenCalledTimes(1)
     for (const [id, scroll] of scrolls) {
       expect(scroll).toHaveBeenCalledTimes(id === expected ? 1 : 0)
     }
