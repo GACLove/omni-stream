@@ -8,5 +8,9 @@ export function htmlPreviewDocument(body: string, resourceUrl: string): string {
   // Prefix before any authored content so relative resources stay in the
   // selected storage. A leading doctype keeps standalone pages and fragments
   // in standards mode. The original source (including scripts) stays intact.
-  return `<!doctype html>\n<base href="${escapedUrl}">\n${body}`
+  // The base URL would otherwise make `#section` links navigate to `/raw/...`
+  // and replace the srcdoc document. Handle fragment-only links locally while
+  // leaving file and external links unchanged.
+  const fragmentNavigation = `<script>document.addEventListener('click',function(e){var a=e.target instanceof Element?e.target.closest('a[href^="#"]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h==="#")return;var t=document.getElementById(decodeURIComponent(h.slice(1)));if(t){e.preventDefault();t.scrollIntoView();}});</script>`
+  return `<!doctype html>\n<base href="${escapedUrl}">\n${fragmentNavigation}\n${body}`
 }
