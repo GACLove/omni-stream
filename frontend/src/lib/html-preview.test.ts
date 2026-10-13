@@ -10,6 +10,8 @@ describe('htmlPreviewDocument', () => {
     ['#a%20b', ['a%20b', 'a b'], 'a%20b'],
     ['#a%20b', ['a b'], 'a b'],
     ['#100%', [], null],
+    ['#', [], null],
+    ['#missing', [], null],
   ] as const)('handles fragment %s with IDs %j', (href, ids, expected) => {
     const scrolls = new Map<string, ReturnType<typeof vi.fn>>(ids.map(id => [id, vi.fn()]))
     let click: (event: unknown) => void = () => { throw new Error('Missing click handler') }
@@ -20,6 +22,7 @@ describe('htmlPreviewDocument', () => {
     const html = htmlPreviewDocument('', 'https://example.test/report.html')
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1]
     expect(script).toBeDefined()
+    const location = { hash: 'initial' }
     runInNewContext(script!, {
       Element,
       document: {
@@ -27,11 +30,13 @@ describe('htmlPreviewDocument', () => {
         getElementById: (id: string) => scrolls.has(id)
           ? { scrollIntoView: scrolls.get(id) } : null,
       },
-      location: { hash: '' },
+      location,
     })
     const preventDefault = vi.fn()
     expect(() => click({ target: new Element(), preventDefault })).not.toThrow()
     expect(preventDefault).toHaveBeenCalledTimes(1)
+    const expectedHash = href === '#' ? '' : `#${encodeURIComponent(expected ?? href.slice(1))}`
+    expect(location.hash).toBe(expectedHash)
     for (const [id, scroll] of scrolls) {
       expect(scroll).toHaveBeenCalledTimes(id === expected ? 1 : 0)
     }
