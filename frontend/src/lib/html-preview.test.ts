@@ -1,8 +1,41 @@
-import { describe, expect, it } from 'vitest'
+import { runInNewContext } from 'node:vm'
+import { describe, expect, it, vi } from 'vitest'
 
 import { htmlPreviewDocument } from './html-preview'
 
 describe('htmlPreviewDocument', () => {
+  it.each([
+    ['#100%', ['100%'], '100%'],
+    ['#%E0%A4%A', ['%E0%A4%A'], '%E0%A4%A'],
+    ['#a%20b', ['a%20b', 'a b'], 'a%20b'],
+    ['#a%20b', ['a b'], 'a b'],
+    ['#100%', [], null],
+  ] as const)('handles fragment %s with IDs %j', (href, ids, expected) => {
+    const scrolls = new Map<string, ReturnType<typeof vi.fn>>(ids.map(id => [id, vi.fn()]))
+    let click: (event: unknown) => void = () => { throw new Error('Missing click handler') }
+    class Element {
+      closest() { return this }
+      getAttribute() { return href }
+    }
+    const html = htmlPreviewDocument('', 'https://example.test/report.html')
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1]
+    expect(script).toBeDefined()
+    runInNewContext(script!, {
+      Element,
+      document: {
+        addEventListener: (_: string, handler: typeof click) => { click = handler },
+        getElementById: (id: string) => scrolls.has(id)
+          ? { scrollIntoView: scrolls.get(id) } : null,
+      },
+    })
+    const preventDefault = vi.fn()
+    expect(() => click({ target: new Element(), preventDefault })).not.toThrow()
+    expect(preventDefault).toHaveBeenCalledTimes(expected === null ? 0 : 1)
+    for (const [id, scroll] of scrolls) {
+      expect(scroll).toHaveBeenCalledTimes(id === expected ? 1 : 0)
+    }
+  })
+
   it('sets the resource base before authored markup without modifying scripts', () => {
     const body = '<!DOCTYPE html><html lang="zh"><body><script>const label = "你好"</script></body></html>'
     const document = htmlPreviewDocument(body, 'https://example.test/raw/local/reports/index.html')

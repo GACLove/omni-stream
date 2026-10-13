@@ -11,6 +11,6 @@ export function htmlPreviewDocument(body: string, resourceUrl: string): string {
   // The base URL would otherwise make `#section` links navigate to `/raw/...`
   // and replace the srcdoc document. Handle fragment-only links locally while
   // leaving file and external links unchanged.
-  const fragmentNavigation = `<script>document.addEventListener('click',function(e){var a=e.target instanceof Element?e.target.closest('a[href^="#"]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h==="#")return;var t=document.getElementById(decodeURIComponent(h.slice(1)));if(t){e.preventDefault();t.scrollIntoView();}});</script>`
+  const fragmentNavigation = `<script>document.addEventListener('click',function(e){var a=e.target instanceof Element?e.target.closest('a[href^="#"]'):null;if(!a)return;var h=a.getAttribute('href');if(!h||h==="#")return;var id=h.slice(1);var t=document.getElementById(id);if(!t){try{id=decodeURIComponent(id);}catch{}t=document.getElementById(id);}if(t){e.preventDefault();t.scrollIntoView();}});</script>`
   return `<!doctype html>\n<base href="${escapedUrl}">\n${fragmentNavigation}\n${body}`
 }
